@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>AsyncM Spec</title>
+
+  <style>
+@media (min-width: 1366px) {
+  body {
+    width: 60%;
+    margin: 0 auto;
+  }
+}
+code {
+  background: #e5e5e5;
+  padding: 0 1ex;
+}
+pre {
+  background: #e5e5e5;
+  padding: 2em;
+}
+pre > code {
+  padding: initial;
+}
+  </style>
+</head>
+<body><h1 id="asyncm-spec-1">AsyncM Spec 1</h1>
+
+<p><strong>AsyncM</strong> is not a standard of promises, it is an indication of the way of how they should work.</p>
+
+<ol>
+<li><p>Following functions exist:</p>
+
+<pre class="prettyprint"><code class="language-no-highlight">createM : runner:((Either&lt;Any, T&gt; → Unit) → MControl) → M&lt;T&gt;
+
+then : M&lt;T&gt; → handler:(Either&lt;Any, T&gt; → M&lt;R&gt;) → M&lt;R&gt;
+
+run : M&lt;T&gt; → callback:(Either&lt;Any, T&gt; → Unit) → MControl</code></pre>
+
+<p>Where</p>
+
+<p><code>MControl</code> is an object with overridable methods:</p>
+
+<pre class="prettyprint"><code class="language-no-highlight">MControl.cancel =
+  createM (callback =&gt;
+             callback(EitherRight(CANNOT_BE_CANCELLED)),
+             defaultMControl)</code></pre>
+
+<pre class="prettyprint"><code class="language-no-highlight">CancellationResult = ALREADY_FINISHED |
+                     CLOSE_TO_FINISH |
+                     CANCELLED |
+                     CANNOT_BE_CANCELLED</code></pre></li>
+<li><p>All functions that are passed to the <code>createM</code>, <code>then</code> or <code>run</code> must be called only once or never with every call of <code>run</code> (i.e. calling <code>run</code> five times allows to call a handler passed to the associated <code>then</code> five times too).</p></li>
+<li><p>After calling <code>run</code>, <code>callback</code> will be called when <code>M</code> will be resolved, or not called, if <code>M</code> had cancelled.</p></li>
+<li><p>If <code>cancel</code> <code>M</code> runned, then it resolves to:</p>
+
+<ol><li><code>ALREADY_FINISHED</code> if <code>M</code> had resolved and <code>callback</code> had called and returned.</li>
+<li><code>CLOSE_TO_FINISH</code> if <code>M</code> had resolved and <code>callback</code> had called but not returned yet (this is possible in multi-threaded systems).</li>
+<li><code>CANCELLED</code> if <code>callback</code> is not yet called and will not called anymore.</li>
+<li><code>CANNOT_BE_CANCELLED</code> — possible only as result of <code>runner</code> if promise don’t support cancellation, or as result of cancellation of cancellation. In such case <code>callback</code> will not called, result of resolving will ignored and <code>cancel</code> will resolve with <code>CANCELLED</code>.</li></ol></li>
+<li><p>Resolving process</p>
+
+<ol><li>If <code>M</code> had created with <code>createM</code>, call <code>runner</code> with receiver of <code>result</code>. Resolve with <code>result</code>.</li>
+<li>If <code>M</code> had created with <code>then prev ...</code>, resolve <code>prev</code> as <code>prevResult</code>, resolve result of calling <code>handler</code> with <code>prevResult</code> as <code>result</code>. Resolve with <code>result</code>.</li></ol></li>
+</ol>
+
+<hr>
+
+<p>Feedback: <a href="mailto:rulix.exec@gmail.com">rulix.exec@gmail.com</a></p></body>
+</html>
